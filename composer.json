@@ -2,10 +2,9 @@
     "name": "snoke/doctrine-softdelete",
     "description": "none",
     "type": "library",
-    "minimum-stability": "dev",
     "autoload": {
         "psr-4": {
-            "Snoke\\DoctrineSoftDelete\\": "src/"
+            "Snoke\\SoftDelete\\": "src/"
         }
     },
     "require": {

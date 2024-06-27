@@ -1,6 +1,6 @@
 <?php
 
-namespace Snoke\DoctrineSoftDelete;
+namespace Snoke\SoftDelete\Annotation;
 
 #[\Attribute] final class SoftDeleteCascade
 {

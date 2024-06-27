@@ -11,11 +11,11 @@ Add the custom repository to your composer.json:
     ],
 ```
 
-checkout library `git req snoke/doctrine-softdelete:dev-main`
+checkout library `composer req snoke/doctrine-softdelete:dev-main`
 
 ## usage
 
-the timetsamps require your entity to use the HasLifecycleCallbacks-Annotation
+your entity needs to use the HasLifecycleCallbacks-Annotation
 
 ```php
 use Doctrine\ORM\Mapping as ORM;

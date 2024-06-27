@@ -1,6 +1,6 @@
 <?php
 
-namespace Snoke\DoctrineSoftDelete;
+namespace Snoke\SoftDelete\Trait;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping as ORM;
@@ -9,8 +9,9 @@ use Doctrine\ORM\Event\PreFlushEventArgs;
 use Doctrine\ORM\PersistentCollection;
 use ReflectionClass;
 use ReflectionProperty;
+use Snoke\SoftDelete\Annotation\SoftDeleteCascade;
 
-trait SoftDeleteTrait
+trait SoftDelete
 {
     private array $processedObjects = [];
 
@@ -24,7 +25,7 @@ trait SoftDeleteTrait
             return;
         }
 
-        if (!in_array(DeletedAt::class, class_uses($entity), true)) {
+        if (!in_array(SoftDelete::class, class_uses($entity), true)) {
             return;
         }
 
@@ -41,12 +42,13 @@ trait SoftDeleteTrait
                 continue;
             }
 
-            if ($this->hasAttribute($property, CascadeSoftDelete::class)) {
+            if ($this->hasAttribute($property, SoftDeleteCascade::class)) {
                 $this->processPropertyValue($em, $propertyValue, true);
             } else {
                 $this->processHardDeleteAttributes($em, $property, $propertyValue);
             }
         }
+        $em->flush();
     }
 
     private function hasAttribute(ReflectionProperty $property, string $attributeClass): bool
@@ -72,10 +74,6 @@ trait SoftDeleteTrait
             return true;
         }
 
-        if (isset($attributeInstance->orphanRemoval) && $attributeInstance->orphanRemoval === true) {
-            return true;
-        }
-
         return false;
     }
 
@@ -83,9 +81,20 @@ trait SoftDeleteTrait
     {
         if ($propertyValue instanceof PersistentCollection || is_array($propertyValue)) {
             foreach ($propertyValue as $element) {
-                $isSoftDelete ? $this->recursiveSoftDelete($em, $element) : $em->remove($element);
+                if ($isSoftDelete) {
+                    $this->recursiveSoftDelete($em, $element);
+                } else {
+                    $em->remove($element);
+                    $em->persist($element);
+                }
             }
         } elseif (is_object($propertyValue)) {
+            if ($isSoftDelete) {
+                $this->recursiveSoftDelete($em, $propertyValue);
+            } else {
+                $em->remove($propertyValue);
+                $em->persist($propertyValue);
+            }
             $isSoftDelete ? $this->recursiveSoftDelete($em, $propertyValue) : $em->remove($propertyValue);
         }
     }
