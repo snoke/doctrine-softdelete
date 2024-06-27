@@ -1,4 +1,9 @@
 services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+
   Snoke\SoftDelete\:
     autowire: true
     autoconfigure: true

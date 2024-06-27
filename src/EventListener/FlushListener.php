@@ -1,5 +1,4 @@
 <?php
-
 namespace Snoke\SoftDelete\EventListener;
 
 use ReflectionException;
@@ -208,7 +207,6 @@ class FlushListener
 
     public function onFlush(OnFlushEventArgs $args): void
     {
-        die("ASD");
         /** @var EntityManagerInterface $objectManager */
         $this->objectManager = $args->getObjectManager();
 
@@ -227,10 +225,7 @@ class FlushListener
 
         $this->handleProccessedObjects();
     }
-    public function __construct(bool $detach = false)
+    public function __construct(private readonly bool $detach = false)
     {
-        var_dump($detach);
-        die("XXXX");
-        die($someSetting);
     }
 }

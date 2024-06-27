@@ -12,5 +12,11 @@
             "allow-contrib": false,
             "require": "5.2.*"
         }
+    },
+    "require": {
+        "php": ">=8.2",
+        "doctrine/doctrine-bundle": "^2.*",
+        "doctrine/orm": "3.*",
+        "symfony/framework-bundle": "7.1.*"
     }
 }

@@ -13,12 +13,6 @@ Add the custom repository to your composer.json:
 
 checkout library `composer req snoke/doctrine-softdelete:dev-main`
 
-## configuration
-register service in services.yaml
-````yaml
-imports:
-  - { resource: '../vendor/snoke/doctrine-softdelete/config/services.yaml' }
-````
 ## usage
 
 your entity needs to use the HasLifecycleCallbacks-Annotation
