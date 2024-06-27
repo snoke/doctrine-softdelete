@@ -13,6 +13,21 @@ Add the custom repository to your composer.json:
 
 checkout library `composer req snoke/doctrine-softdelete:dev-main`
 
+## configuration
+register service in services.yaml
+````yaml
+services:
+    Snoke\SoftDelete\:
+      autowire: true
+      autoconfigure: true
+      resource: '../vendor/snoke/doctrine-softdelete/src'
+    Snoke\SoftDelete\EventListener\SoftDeleteListener:
+        tags:
+            - name: 'doctrine.event_listener'
+              event: 'onFlush'
+              priority: 500
+              connection: 'default'
+````
 ## usage
 
 your entity needs to use the HasLifecycleCallbacks-Annotation
