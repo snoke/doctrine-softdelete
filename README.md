@@ -17,16 +17,10 @@ checkout library `composer req snoke/doctrine-softdelete:dev-main`
 register service in services.yaml
 ````yaml
 services:
-    Snoke\SoftDelete\:
-      autowire: true
-      autoconfigure: true
-      resource: '../vendor/snoke/doctrine-softdelete/src'
-    Snoke\SoftDelete\EventListener\SoftDeleteListener:
-        tags:
-            - name: 'doctrine.event_listener'
-              event: 'onFlush'
-              priority: 500
-              connection: 'default'
+  Snoke\SoftDelete\EventListener\SoftDeleteListener:
+      _defaults:
+        autowire: true 
+        autoconfigure: true
 ````
 ## usage
 
@@ -38,7 +32,7 @@ use Snoke\SoftDelete\Trait\SoftDelete;
 
 #[ORM\HasLifecycleCallbacks]
 #[ORM\Entity]
-class User
+class Entity
 {
     use SoftDelete;
     ...
@@ -51,7 +45,7 @@ update database schema: `php bin/console make:migration` and `php bin/console do
 The following example would not delete the entry from the database but will store the current timestamp in the deletedAt column:
 
 ```php
-$user->delete();
+$entityManager->remove($entity); // or $user->delete()
 $entityManager->flush();
 var_dump($user->getDeletedAt());
 ```
@@ -70,18 +64,18 @@ object(DateTimeImmutable)#674 (3) {
 ## Cascade
 SoftDelete also respects hard delete cascade annotations!
 
-In this example, soft deleting a user will result in hard deleting the orphans:
+In this example, soft deleting a user will result in hard deleting the children:
 ```php
 use Snoke\SoftDelete\Trait\SoftDelete;
 
 #[ORM\HasLifecycleCallbacks]
 #[ORM\Entity]
-class User
+class Parent
 {
     use SoftDelete
     
-    #[ORM\OneToMany(targetEntity: Orphan::class, mappedBy: 'user', cascade: ['persist','remove'])]
-    private Collection $orphans;
+    #[ORM\OneToMany(targetEntity: Child::class, mappedBy: 'parent', cascade: ['persist','remove'])]
+    private Collection $children;
 ```
 
 Also you can use the Cascade-Interface to mark soft delete cascades
@@ -92,13 +86,13 @@ use Snoke\SoftDelete\Annotation\SoftDeleteCascade;
 
 #[ORM\HasLifecycleCallbacks]
 #[ORM\Entity]
-class User
+class Parent
 {
     use SoftDelete;
     
     #[SoftDeleteCascade]
-    #[ORM\OneToMany(targetEntity: Orphan::class, mappedBy: 'user', cascade: ['persist'])]
-    private Collection $orphans;
+    #[ORM\OneToMany(targetEntity: Child::class, mappedBy: 'user', cascade: ['persist'])]
+    private Collection $children;
 ```
 ## OrphanRemoval
 
@@ -111,5 +105,5 @@ to soft-delete orphans **AND** remove the relation
 If you want to remove the relation to the deleted parent without deleting the children, you can still use the old Doctrine annotation:
 
 ```php
-    #[ORM\OneToMany(orphanRemoval: true, targetEntity: Orphan::class, mappedBy: 'user', cascade: ['persist'])]
+#[ORM\OneToMany(orphanRemoval: true, targetEntity: Orphan::class, mappedBy: 'user', cascade: ['persist'])]
 ```

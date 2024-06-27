@@ -2,6 +2,8 @@
 
 namespace Snoke\SoftDelete\EventListener;
 
+use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\EntityManagerInterface;
 use ReflectionException;
 use Snoke\SoftDelete\Annotation\SoftDeleteCascade;
 use Snoke\SoftDelete\Trait\SoftDelete;
@@ -12,6 +14,7 @@ use Doctrine\ORM\Mapping\AssociationMapping;
 use Doctrine\ORM\PersistentCollection;
 use Doctrine\Persistence\ObjectManager;
 use ReflectionClass;
+use Doctrine\ORM\UnitOfWork;
 
 #[AsDoctrineListener(event: Events::onFlush, priority: 500, connection: 'default')]
 class SoftDeleteListener
@@ -23,7 +26,7 @@ class SoftDeleteListener
     private function softDelete($entity): void
     {
         $entity->delete();
-        $this->processedObjects[] = spl_object_id($entity);
+        $this->processedObjects[spl_object_id($entity)] = $entity;
         $this->objectManager->persist($entity);
         $this->objectManager->flush();
     }
@@ -31,7 +34,8 @@ class SoftDeleteListener
     private function hardDelete($entity): void
     {
         $this->objectManager->remove($entity);
-        $this->processedObjects[] = spl_object_id($entity);
+
+        $this->processedObjects[spl_object_id($entity)] = $entity;
         $this->objectManager->persist($entity);
         $this->objectManager->flush();
     }
@@ -85,7 +89,7 @@ class SoftDeleteListener
      */
     private function deleteChildren(object $parent): void
     {
-        if (in_array($parent, $this->processedObjects, true)) { return; }
+        if (in_array(spl_object_id($parent), array_keys($this->processedObjects), true)) { return; }
 
         $children = $this->getChildren($parent);
         foreach($children['softDelete'] as $child) {
@@ -130,14 +134,14 @@ class SoftDeleteListener
      */
     private function hardDeleteChild(object $parent, object $child, AssociationMapping $mapping = null): void
     {
-        if (in_array(spl_object_id($child), $this->processedObjects, true)) { return; }
+        if (in_array(spl_object_id($child), array_keys($this->processedObjects), true)) { return; }
 
         $this->deleteChildren($child);
 
         $this->dissolveRelation($parent,$child, $mapping);
 
         $this->objectManager->remove($child);
-        $this->processedObjects[] = spl_object_id($child);
+        $this->processedObjects[spl_object_id($child)] = $child;
     }
 
     /**
@@ -145,7 +149,7 @@ class SoftDeleteListener
      */
     private function softDeleteChild(object $parent, object $child, AssociationMapping $mapping = null): void
     {
-        if (in_array(spl_object_id($child), $this->processedObjects, true)) { return; }
+        if (in_array(spl_object_id($child), array_keys($this->processedObjects), true)) { return; }
 
         $this->deleteChildren($child);
         $this->softDelete($child);
@@ -156,11 +160,11 @@ class SoftDeleteListener
      */
     private function delete(object $entity, bool $softDelete, ?object $parent = null): void
     {
-        if (in_array(spl_object_id($entity), $this->processedObjects, true)) {
+        if (in_array(spl_object_id($entity), array_keys($this->processedObjects), true)) {
             return;
         }
-        $this->processedObjects[] = spl_object_id($entity);
 
+        $this->processedObjects[spl_object_id($entity)] = $entity;
         $this->deleteChildren($entity);
 
         $softDelete ? $this->softDelete($entity) : $this->hardDelete($entity);
@@ -171,7 +175,7 @@ class SoftDeleteListener
     /**
      * @throws ReflectionException
      */
-    private function handleUpdates($entity): void
+    private function handleUpdate($entity): void
     {
         if (!in_array(SoftDelete::class, class_uses($entity), true)) {
             return;
@@ -184,15 +188,45 @@ class SoftDeleteListener
         $this->delete($entity, true);
     }
 
+    private function handleDeletion(object $entity) {
+        $this->delete($entity, true);
+        $classMetadata = $this->objectManager->getClassMetadata(get_class($entity));
+
+        // Remove the entity from the scheduled deletions
+        $uow = $this->objectManager->getUnitOfWork();
+        $reflectionProperty = new \ReflectionProperty(UnitOfWork::class, 'entityDeletions');
+        $reflectionProperty->setAccessible(true);
+        $scheduledDeletions = $reflectionProperty->getValue($uow);
+        $objectId = spl_object_id($entity);
+        unset($scheduledDeletions[$objectId]);
+        $reflectionProperty->setValue($uow, $scheduledDeletions);
+    }
+
+    private function handleProccessedObjects() {
+        foreach($this->processedObjects as $objectId => $object) {
+           $this->objectManager->detach($object);
+        }
+    }
+
     public function onFlush(OnFlushEventArgs $args): void
     {
-
+        /** @var EntityManagerInterface $objectManager */
         $this->objectManager = $args->getObjectManager();
 
         $uow = $this->objectManager->getUnitOfWork();
-        foreach ($uow->getScheduledEntityUpdates() as $entity) {
-            $this->handleUpdates($entity);
+
+        foreach ($uow->getScheduledEntityDeletions() as $entity) {
+            if (in_array(SoftDelete::class,class_uses($entity))) {
+                $this->handleDeletion($entity);
+            }
         }
+        foreach ($uow->getScheduledEntityUpdates() as $entity) {
+            if (in_array(SoftDelete::class,class_uses($entity))) {
+                $this->handleUpdate($entity);
+            }
+        }
+
+        $this->handleProccessedObjects();
     }
 
 }
