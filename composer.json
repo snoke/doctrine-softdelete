@@ -1,0 +1,16 @@
+{
+    "name": "snoke/doctrine-softdelete",
+    "description": "none",
+    "type": "library",
+    "minimum-stability": "dev",
+    "autoload": {
+        "psr-4": {
+            "Snoke\\DoctrineSoftDelete\\": "src/"
+        }
+    },
+    "require": {
+        "php": ">=8.2",
+        "doctrine/doctrine-bundle": ">=2.0",
+        "doctrine/orm": ">=3.0"
+    }
+}
