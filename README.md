@@ -16,11 +16,8 @@ checkout library `composer req snoke/doctrine-softdelete:dev-main`
 ## configuration
 register service in services.yaml
 ````yaml
-services:
-  Snoke\SoftDelete\EventListener\SoftDeleteListener:
-      _defaults:
-        autowire: true 
-        autoconfigure: true
+imports:
+  - { resource: '../vendor/snoke/doctrine-softdelete/config/services.yaml' }
 ````
 ## usage
 

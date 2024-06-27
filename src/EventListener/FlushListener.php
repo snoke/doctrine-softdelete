@@ -2,24 +2,22 @@
 
 namespace Snoke\SoftDelete\EventListener;
 
-use Doctrine\ORM\EntityManager;
-use Doctrine\ORM\EntityManagerInterface;
 use ReflectionException;
-use Snoke\SoftDelete\Annotation\SoftDeleteCascade;
-use Snoke\SoftDelete\Trait\SoftDelete;
+use ReflectionClass;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener;
 use Doctrine\ORM\Event\OnFlushEventArgs;
 use Doctrine\ORM\Events;
 use Doctrine\ORM\Mapping\AssociationMapping;
 use Doctrine\ORM\PersistentCollection;
-use Doctrine\Persistence\ObjectManager;
-use ReflectionClass;
 use Doctrine\ORM\UnitOfWork;
+use Snoke\SoftDelete\Annotation\SoftDeleteCascade;
+use Snoke\SoftDelete\Trait\SoftDelete;
 
 #[AsDoctrineListener(event: Events::onFlush, priority: 500, connection: 'default')]
-class SoftDeleteListener
+class FlushListener
 {
-    private ObjectManager $objectManager;
+    private EntityManagerInterface $objectManager;
     private array $processedObjects = [];
 
 
@@ -204,12 +202,13 @@ class SoftDeleteListener
 
     private function handleProccessedObjects() {
         foreach($this->processedObjects as $objectId => $object) {
-           $this->objectManager->detach($object);
+           //$this->objectManager->detach($object);
         }
     }
 
     public function onFlush(OnFlushEventArgs $args): void
     {
+        die("ASD");
         /** @var EntityManagerInterface $objectManager */
         $this->objectManager = $args->getObjectManager();
 
@@ -228,5 +227,10 @@ class SoftDeleteListener
 
         $this->handleProccessedObjects();
     }
-
+    public function __construct(bool $detach = false)
+    {
+        var_dump($detach);
+        die("XXXX");
+        die($someSetting);
+    }
 }
