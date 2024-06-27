@@ -2,6 +2,7 @@
 
 namespace Snoke\SoftDelete\Trait;
 
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping as ORM;
 use DateTimeImmutable;
@@ -41,11 +42,10 @@ trait SoftDelete
             if ($propertyValue === null) {
                 continue;
             }
-
             if ($this->hasAttribute($property, SoftDeleteCascade::class)) {
-                $this->processPropertyValue($em, $propertyValue, true);
+                $this->processPropertyValue($em,$property, $propertyValue, true);
             } else {
-                $this->processHardDeleteAttributes($em, $property, $propertyValue);
+                $this->processHardDeleteAttributes($entity, $em, $property, $propertyValue);
             }
         }
         $em->flush();
@@ -55,14 +55,25 @@ trait SoftDelete
     {
         return count($property->getAttributes($attributeClass)) > 0;
     }
-
-    private function processHardDeleteAttributes(EntityManagerInterface $em, ReflectionProperty $property, $propertyValue): void
+    private function processHardDeleteAttributes(object $entity, EntityManagerInterface $em, ReflectionProperty $property, $propertyValue, bool $orphanRemoval = false): void
     {
         $attributes = $property->getAttributes();
         foreach ($attributes as $attribute) {
             $instance = $attribute->newInstance();
+            if (isset($instance->orphanRemoval) && (true === $instance->orphanRemoval)) {
+                if (PersistentCollection::class === get_class($propertyValue)) {
+                    foreach ($propertyValue as $element) {
+                        $mappedBy = $propertyValue->getMapping()['mappedBy'];
+                        $reflect = new ReflectionClass($element);
+                        $prop = $reflect->getProperty($mappedBy);
+                        $prop->setAccessible(true);
+                        $prop->setValue($element, null);
+                        $em->persist($element);
+                    }
+                }
+            }
             if ($this->isHardDelete($instance)) {
-                $this->processPropertyValue($em, $propertyValue, false);
+                $this->processPropertyValue($em, $property, $propertyValue, false);
                 break;
             }
         }
@@ -77,12 +88,29 @@ trait SoftDelete
         return false;
     }
 
-    private function processPropertyValue(EntityManagerInterface $em, $propertyValue, bool $isSoftDelete): void
+    private function processPropertyValue(EntityManagerInterface $em, $property,$propertyValue, bool $isSoftDelete): void
     {
         if ($propertyValue instanceof PersistentCollection || is_array($propertyValue)) {
             foreach ($propertyValue as $element) {
                 if ($isSoftDelete) {
                     $this->recursiveSoftDelete($em, $element);
+                    $attributes = $property->getAttributes();
+                    foreach ($attributes as $attribute) {
+                        $instance = $attribute->newInstance();
+                        if (isset($instance->orphanRemoval) && (true === $instance->orphanRemoval)) {
+                            if (PersistentCollection::class === get_class($propertyValue)) {
+                                foreach ($propertyValue as $element) {
+                                    $propertyValue->removeElement($element);
+                                    $mappedBy = $propertyValue->getMapping()['mappedBy'];
+                                    $reflect = new ReflectionClass($element);
+                                    $prop = $reflect->getProperty($mappedBy);
+                                    $prop->setAccessible(true);
+                                    $prop->setValue($element, null);
+                                    $em->persist($element);
+                                }
+                            }
+                        }
+                    }
                 } else {
                     $em->remove($element);
                     $em->persist($element);

@@ -3,12 +3,12 @@
 Add the custom repository to your composer.json:
 
 ```php
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "git@github.com:snoke/doctrine-softdelete.git"
-        }
-    ],
+"repositories": [
+    {
+        "type": "vcs",
+        "url": "git@github.com:snoke/doctrine-softdelete.git"
+    }
+],
 ```
 
 checkout library `composer req snoke/doctrine-softdelete:dev-main`
@@ -19,7 +19,7 @@ your entity needs to use the HasLifecycleCallbacks-Annotation
 
 ```php
 use Doctrine\ORM\Mapping as ORM;
-use Snoke\DoctrineSoftDelete\Trait\SoftDelete;
+use Snoke\SoftDelete\Trait\SoftDelete;
 
 #[ORM\HasLifecycleCallbacks]
 #[ORM\Entity]
@@ -53,17 +53,17 @@ object(DateTimeImmutable)#674 (3) {
 ```
 
 ## Cascade
-SoftDelete also respect hard delete cascade annotations!
+SoftDelete also respects hard delete cascade annotations!
 
-in this example, soft deleting user will result in hard deleting the orphans
+In this example, soft deleting a user will result in hard deleting the orphans:
 ```php
-import Snoke\DoctrineSoftDelete\SoftDeleteTrait;
+use Snoke\SoftDelete\Trait\SoftDelete;
 
 #[ORM\HasLifecycleCallbacks]
 #[ORM\Entity]
 class User
 {
-    use SoftDeleteTrait
+    use SoftDelete
     
     #[ORM\OneToMany(targetEntity: Orphan::class, mappedBy: 'user', cascade: ['persist','remove'])]
     private Collection $orphans;
@@ -72,16 +72,29 @@ class User
 Also you can use the Cascade-Interface to mark soft delete cascades
 in this example, soft deleting user will result in soft deleting the orphans
 ```php
-import Snoke\DoctrineSoftDelete\SoftDelete;
-import Snoke\DoctrineSoftDelete\SoftDeleteCascade;
+use Snoke\SoftDelete\Trait\SoftDelete;
+use Snoke\SoftDelete\Annotation\SoftDeleteCascade;
 
 #[ORM\HasLifecycleCallbacks]
 #[ORM\Entity]
 class User
 {
-    use Trait\SoftDelete;
+    use SoftDelete;
     
     #[SoftDeleteCascade]
     #[ORM\OneToMany(targetEntity: Orphan::class, mappedBy: 'user', cascade: ['persist'])]
     private Collection $orphans;
+```
+## OrphanRemoval
+
+to delete orphans **AND** remove the relation
+
+```php
+#[SoftDeleteCascade(orphanRemoval: true]
+```
+
+If you want to remove the relation to the deleted parent without deleting the children, you can still use the old Doctrine annotation:
+
+```php
+    #[ORM\OneToMany(orphanRemoval: true, targetEntity: Orphan::class, mappedBy: 'user', cascade: ['persist'])]
 ```
