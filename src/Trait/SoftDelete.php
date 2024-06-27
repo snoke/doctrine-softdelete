@@ -14,11 +14,23 @@ use Snoke\SoftDelete\Annotation\SoftDeleteCascade;
 
 trait SoftDelete
 {
+
+    /**
+     * @var object[]
+     */
     private array $processedObjects = [];
 
+    /**
+     * @var DateTimeImmutable|null
+     */
     #[ORM\Column(nullable: true)]
     private ?DateTimeImmutable $deletedAt = null;
 
+    /**
+     * @param EntityManagerInterface $em
+     * @param object $entity
+     * @return void
+     */
     private function recursiveSoftDelete(EntityManagerInterface $em, object $entity): void
     {
         $objectId = spl_object_id($entity);
@@ -51,10 +63,26 @@ trait SoftDelete
         $em->flush();
     }
 
+    /**
+     * @param ReflectionProperty $property
+     * @param string $attributeClass
+     * @return bool
+     */
     private function hasAttribute(ReflectionProperty $property, string $attributeClass): bool
     {
         return count($property->getAttributes($attributeClass)) > 0;
     }
+
+
+    /**
+     * @param object $entity
+     * @param EntityManagerInterface $em
+     * @param ReflectionProperty $property
+     * @param $propertyValue
+     * @param bool $orphanRemoval
+     * @return void
+     * @throws \ReflectionException
+     */
     private function processHardDeleteAttributes(object $entity, EntityManagerInterface $em, ReflectionProperty $property, $propertyValue, bool $orphanRemoval = false): void
     {
         $attributes = $property->getAttributes();
@@ -79,6 +107,11 @@ trait SoftDelete
         }
     }
 
+
+    /**
+     * @param object $attributeInstance
+     * @return bool
+     */
     private function isHardDelete(object $attributeInstance): bool
     {
         if (isset($attributeInstance->cascade) && in_array('remove', $attributeInstance->cascade, true)) {
@@ -88,6 +121,15 @@ trait SoftDelete
         return false;
     }
 
+
+    /**
+     * @param EntityManagerInterface $em
+     * @param $property
+     * @param $propertyValue
+     * @param bool $isSoftDelete
+     * @return void
+     * @throws \ReflectionException
+     */
     private function processPropertyValue(EntityManagerInterface $em, $property,$propertyValue, bool $isSoftDelete): void
     {
         if ($propertyValue instanceof PersistentCollection || is_array($propertyValue)) {
@@ -113,7 +155,7 @@ trait SoftDelete
                     }
                 } else {
                     $em->remove($element);
-                    $em->persist($element);
+                    $em->flush();
                 }
             }
         } elseif (is_object($propertyValue)) {
@@ -121,27 +163,45 @@ trait SoftDelete
                 $this->recursiveSoftDelete($em, $propertyValue);
             } else {
                 $em->remove($propertyValue);
-                $em->persist($propertyValue);
+                $em->flush();
             }
             $isSoftDelete ? $this->recursiveSoftDelete($em, $propertyValue) : $em->remove($propertyValue);
         }
     }
 
+
+    /**
+     * @param DateTimeImmutable|null $deletedAt
+     * @return void
+     */
     private function setDeletedAt(?DateTimeImmutable $deletedAt = null): void
     {
         $this->deletedAt = $deletedAt ?: new DateTimeImmutable();
     }
 
+
+    /**
+     * @return DateTimeImmutable|null
+     */
     public function getDeletedAt(): ?DateTimeImmutable
     {
         return $this->deletedAt;
     }
 
+
+    /**
+     * @return void
+     */
     public function delete(): void
     {
         $this->setDeletedAt();
     }
 
+
+    /**
+     * @param PreFlushEventArgs $args
+     * @return void
+     */
     #[ORM\PreFlush]
     public function deletedAtPreFlush(PreFlushEventArgs $args): void
     {

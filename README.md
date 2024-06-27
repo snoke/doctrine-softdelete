@@ -87,7 +87,7 @@ class User
 ```
 ## OrphanRemoval
 
-to delete orphans **AND** remove the relation
+to soft-delete orphans **AND** remove the relation
 
 ```php
 #[SoftDeleteCascade(orphanRemoval: true]
