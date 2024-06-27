@@ -11,7 +11,7 @@ Add the custom repository to your composer.json:
     ],
 ```
 
-checkout library `git req snoke/doctrine-sofftdelete:dev-main`
+checkout library `git req snoke/doctrine-softdelete:dev-main`
 
 ## usage
 
@@ -57,14 +57,13 @@ SoftDelete also respect hard delete cascade annotations!
 
 in this example, soft deleting user will result in hard deleting the orphans
 ```php
-import Snoke\DoctrineSoftDelete\SoftDelete;
-import Snoke\DoctrineSoftDelete\Annotation\Cascade as SoftDeleteCascade;
+import Snoke\DoctrineSoftDelete\SoftDeleteTrait;
 
 #[ORM\HasLifecycleCallbacks]
 #[ORM\Entity]
 class User
 {
-    use SoftDeleteCascade;
+    use SoftDeleteTrait
     
     #[ORM\OneToMany(targetEntity: Orphan::class, mappedBy: 'user', cascade: ['persist','remove'])]
     private Collection $orphans;
@@ -74,7 +73,7 @@ Also you can use the Cascade-Interface to mark soft delete cascades
 in this example, soft deleting user will result in soft deleting the orphans
 ```php
 import Snoke\DoctrineSoftDelete\SoftDelete;
-import Snoke\DoctrineSoftDelete\Annotation\Cascade as SoftDeleteCascade;
+import Snoke\DoctrineSoftDelete\SoftDeleteCascade;
 
 #[ORM\HasLifecycleCallbacks]
 #[ORM\Entity]
