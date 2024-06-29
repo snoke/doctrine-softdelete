@@ -11,7 +11,7 @@ Add the custom repository to your composer.json:
 ],
 ```
 
-checkout library `composer req snoke/doctrine-softdelete:dev-main`
+checkout library `composer req snoke/doctrine-softdelete:dev-master`
 
 ## usage
 
