@@ -1,5 +1,16 @@
 ## installation
 
+Add the custom repository to your composer.json:
+
+```php
+"repositories": [
+    {
+        "type": "vcs",
+        "url": "git@github.com:snoke/doctrine-softdelete.git"
+    }
+],
+```
+
 checkout library `composer req snoke/doctrine-softdelete:dev-master`
 
 ## usage
