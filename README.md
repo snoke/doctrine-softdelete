@@ -1,3 +1,5 @@
+unstable work in progress!
+
 ## installation
 
 Add the custom repository to your composer.json:
